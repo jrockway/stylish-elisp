@@ -87,7 +87,7 @@ Prefix argument RECONNECT forces a reconnect."
 
 (defun stylish-process-buffer ()
   (while (and (not (null stylish-partial-message))
-              (string-match "^\\(.+\\)\n\\(.*\\)$" stylish-partial-message))
+              (string-match "^\\([^\n]+\\)\n?\\(.*\\)" stylish-partial-message))
     (let ((message (match-string 1 stylish-partial-message)))
       (condition-case e
           (stylish-process-message (stylish-json-decode message))

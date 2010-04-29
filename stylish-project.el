@@ -110,7 +110,9 @@ Optional argument FORCE skips the existence check."
      (eproject-root)
      nil
      (lambda (output)
-       (stylish-repl-insert output 'stylish-repl-output-face))
+       (stylish-repl-insert output 'stylish-repl-output-face)
+       (when (string-match "^Modules failed to load in the new REPL" output)
+         (stylish-repl-insert-prompt)))
      (lambda (gen)
        (stylish-repl-message (format "\nNow at generation %s" gen))
        (stylish-repl-insert-prompt))

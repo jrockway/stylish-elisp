@@ -105,18 +105,26 @@ Optional argument FORCE skips the existence check."
 (defun stylish-project-repl ()
   "Start or switch to this project's Stylish REPL."
   (interactive)
-  (let ((buf (stylish-repl-get-buffer (stylish-project-name (eproject-root)))))
-    (stylish-register-project
-     (eproject-root)
-     nil
-     (lambda (output)
-       (stylish-repl-insert output 'stylish-repl-output-face)
-       (when (string-match "^Modules failed to load in the new REPL" output)
-         (stylish-repl-insert-prompt)))
-     (lambda (gen)
-       (stylish-repl-message (format "\nNow at generation %s" gen))
-       (stylish-repl-insert-prompt))
-     `(:repl-buffer ,buf))
+  (let* ((root (eproject-root))
+         (buf (stylish-repl-get-buffer (stylish-project-name root))))
+
+    (with-current-buffer buf
+      (setf eproject-root root)
+      (eproject-mode 1)
+      (add-hook 'kill-buffer-hook
+                (lambda () (stylish-unregister-project (eproject-root)))
+                nil t))
+
+    (ignore-errors
+      (stylish-register-project root nil
+       (lambda (output)
+         (stylish-repl-insert output 'stylish-repl-output-face)
+         (when (string-match "^Modules failed to load in the new REPL" output)
+           (stylish-repl-insert-prompt)))
+       (lambda (gen)
+         (stylish-repl-message (format "\nNow at generation %s" gen))
+         (stylish-repl-insert-prompt))
+       `(:repl-buffer ,buf)))
     (pop-to-buffer buf)))
 
 (provide 'stylish-project)

@@ -85,7 +85,8 @@ Optional argument NO-SELECT inhibits popping to the buffer."
 
   (define-key stylish-repl-prompt-map (kbd "<RET>") 'stylish-repl-send)
   (define-key stylish-repl-prompt-map (kbd "C-a") 'stylish-repl-beginning-of-line)
-  (define-key stylish-repl-prompt-map (kbd "C-c C-c") 'stylish-repl-OH-NOES!!11!)
+  (define-key stylish-repl-prompt-map (kbd "C-c c") 'stylish-repl-OH-NOES!!11!)
+  (define-key stylish-repl-prompt-map (kbd "C-c C-c") 'stylish-repl-interrupt)
   (define-key stylish-repl-prompt-map (kbd "M-p") 'stylish-repl-history-up)
   (define-key stylish-repl-prompt-map (kbd "M-n") 'stylish-repl-history-down)
 
@@ -245,6 +246,11 @@ Argument START and END define the region to send."
                         nil
                         `(:name ,stylish-repl-name
                           :buffer ,(current-buffer))))
+
+(defun stylish-repl-interrupt nil
+  "Interrupt execution of the current command without killing the whole REPL."
+  (interactive)
+  (stylish-send-message "kill_repl" `(:name ,stylish-repl-name :signal 10)))
 
 (defun stylish-repl-history-cleanup nil
   "Remove all elements from the history ring that have a true

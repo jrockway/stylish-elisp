@@ -28,14 +28,24 @@
 (require 'json)
 
 (defvar stylish-outstanding-request-handlers nil
-  "Alist of cookie -> (handler . args) representing handlers for Stylish requests")
+  "Alist of cookie -> (handler . args) representing handlers for Stylish requests.")
 
 (defvar stylish-next-cookie 1
-  "Cookie to be used for the next request")
+  "Cookie to be used for the next request.")
 
 (defvar stylish-partial-message "")
 
 (defvar stylish-process nil)
+
+(defvar stylish-reconnect-hook nil
+  "Hook to run on connect or reconnect.")
+
+(add-hook 'stylish-reconnect-hook
+          (lambda () (setf stylish-outstanding-request-handlers nil)))
+
+(defun stylish-null-function (&rest args)
+  "This function works like Radioactive Man's goggles."
+  nil)
 
 (defun stylish-get-next-cookie ()
   "Return a unique cookie for the next request."
@@ -50,22 +60,23 @@ Argument MESSAGE is the text we got from stylish."
 
 (defun stylish-sentinel (&rest args)
   "Tend to the Stylish connection.
-Optional argument ARGS blah.")
+Optional argument ARGS is optional.")
 
 (defun stylish-connect ()
   "Connect to a stylish Stylish server."
   (interactive)
   (when stylish-process
     (delete-process stylish-process)
-    (setf stylish-partial-message nil)) ;; also kill?
-  (setf stylish-process
-        (make-network-process :name "stylish"
-                              :family 'local
-                              :service "/tmp/stylish"
-                              :noquery t
-                              :filter #'stylish-filter
-                              :sentinel #'stylish-sentinel
-                              :coding 'utf-8)))
+    (setf stylish-partial-message nil))
+  (prog1 (setf stylish-process
+               (make-network-process :name "stylish"
+                                     :family 'local
+                                     :service "/tmp/stylish"
+                                     :noquery t
+                                     :filter #'stylish-filter
+                                     :sentinel #'stylish-sentinel
+                                     :coding 'utf-8))
+    (run-hooks 'stylish-reconnect-hook)))
 
 (defun stylish (&optional reconnect)
   "Connect to Stylish, if not already connected.

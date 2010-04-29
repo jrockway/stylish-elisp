@@ -1,10 +1,17 @@
 (require 'stylish)
 
-(defvar stylish-repl-history (make-ring 50)
+(defvar stylish-repl-history nil
   "History of commands you've entered into the REPL.")
 
 (defvar stylish-repl-history-id -1
   "Which history element we're using right now.  Reset by `stylish-repl-send'.")
+
+(defvar stylish-repl-name nil
+  "The name of this REPL, according to the Stylish server.")
+
+(make-variable-buffer-local 'stylish-repl-history)
+(make-variable-buffer-local 'stylish-repl-history-id)
+(make-variable-buffer-local 'stylish-repl-name)
 
 (defvar stylish-repl-prompt-map nil
   "Keymap used when at the PERL> prompt")
@@ -12,13 +19,6 @@
 (defvar stylish-repl-internal-commands-alist nil
   "Dispatch table for repl internal commands, elements are of the form:
    (name . function")
-
-(defvar stylish-repl-send-hooks nil
-  "Commands to run after a query has been sent to the REPL.  Not
-triggered when an `internal' command is run.")
-
-(defvar +stylish-repl-buffer "*Stylish REPL*"
-  "The name of the Stylish REPL buffer")
 
 ; custom
 
@@ -58,19 +58,23 @@ triggered when an `internal' command is run.")
 the Perl REPL)"
   :group 'stylish-repl)
 
-(defun stylish-repl-get-buffer ()
-  "Get the Stylish REPL buffer, creating it if needed."
-  (or (get-buffer +stylish-repl-buffer)
-      (and (get-buffer-create +stylish-repl-buffer)
-           (with-current-buffer +stylish-repl-buffer
-             (let ((inhibit-stylish-repl-startup-message-p t))
-               (stylish-repl-mode)
-               (current-buffer))))))
+(defun stylish-repl-name-for (name)
+  (concat "*Stylish REPL " name "*"))
 
-(defun stylish-repl nil
-  "Spawn a Stylish REPL buffer."
+(defun stylish-repl (&optional name no-select)
+  "Spawn a Stylish REPL buffer.
+Optional argument NAME is the name of the REPL to attach to.
+Optional argument NO-SELECT inhibits popping to the buffer."
   (interactive)
-  (switch-to-buffer (stylish-repl-get-buffer)))
+  (when (not name) (setf name "default"))
+  (let ((buf (get-buffer-create (stylish-repl-name-for name))))
+    (with-current-buffer buf
+      (stylish-repl-mode)
+      (setf stylish-repl-history (make-ring 50))
+      (setf stylish-repl-history-id -1)
+      (setf stylish-repl-name name))
+    (when (not no-select) (display-buffer buf))
+    buf))
 
 (define-derived-mode stylish-repl-mode fundamental-mode "Stylish[REPL]"
   "The major mode for the Stylish REPL buffer."
@@ -82,7 +86,6 @@ the Perl REPL)"
   (define-key stylish-repl-prompt-map (kbd "<RET>") 'stylish-repl-send)
   (define-key stylish-repl-prompt-map (kbd "C-a") 'stylish-repl-beginning-of-line)
   (define-key stylish-repl-prompt-map (kbd "C-c C-c") 'stylish-repl-OH-NOES!!11!)
-  ; i would prefer up/down, but that's a little weird in emacs
   (define-key stylish-repl-prompt-map (kbd "M-p") 'stylish-repl-history-up)
   (define-key stylish-repl-prompt-map (kbd "M-n") 'stylish-repl-history-down)
 
@@ -146,9 +149,9 @@ the Perl REPL)"
          (text (buffer-substring-no-properties start end)))
     text))
 
-(defun* stylish-handler-repl (command (&key result success data repl) closure)
+(defun* stylish-handler-repl (command (&key result success data repl) (&key buffer))
   "Handle a return from the REPL"
-  (with-current-buffer (stylish-repl-get-buffer)
+  (with-current-buffer buffer
     (save-excursion
       (goto-char (point-max))
       (cond ((equal command "repl")
@@ -163,8 +166,9 @@ the Perl REPL)"
     :keep-handler)
 
 (defun stylish-repl-eval-perl (perl)
-  (stylish-send-message "repl" (list :code perl)
-                        'stylish-handler-repl))
+  (stylish-send-message "repl" `(:code ,perl :name ,stylish-repl-name)
+                        'stylish-handler-repl nil
+                        `(:buffer ,(current-buffer))))
 
 (defun stylish-repl-send (&optional nosave)
   "Send a command to the REPL"
@@ -179,8 +183,13 @@ the Perl REPL)"
     (stylish-repl-insert "\n")
     (if (string-match "^," text) ; perl or internal command?
         (stylish-repl-process-internal-command text)
-      (run-hooks 'stylish-repl-send-hook)
       (stylish-repl-eval-perl text))))
+
+(defun stylish-repl-get-buffer (&optional name)
+  (cond (name (let ((buf (get-buffer (stylish-repl-name-for name))))
+                (if buf buf
+                  (stylish-repl name t))))
+        (t (current-buffer))))
 
 (defun stylish-repl-process-internal-command (command)
   "Run the internal command COMMAND."
@@ -194,32 +203,21 @@ the Perl REPL)"
       (setq prompt (funcall handler)))
     (if prompt (stylish-repl-insert-prompt))))
 
-(defun stylish-repl-send-file (&optional buffer)
-  "Send a file to the REPL to load"
-  (interactive)
-  (or buffer (setq buffer (current-buffer)))
-  (let ((fn (buffer-file-name buffer)))
-    (stylish-send-command 'repl-load-file :filename fn)
-    (with-current-buffer (stylish-repl-get-buffer)
-      (stylish-repl-message (format "\n# Sending %s\n" fn)))))
-
-(defun stylish-repl-switch-to-repl ()
-  "Switch to stylish buffer"
-  (interactive)
-  (switch-to-buffer +stylish-repl-buffer)
-  (end-of-buffer))
-
-(defun stylish-repl-switch-to-repl-other-window ()
-  "Switch to stylish buffer (in other window)"
-  (interactive)
-  (switch-to-buffer-other-window +stylish-repl-buffer)
-  (end-of-buffer))
+;; (defun stylish-repl-send-file (&optional buffer)
+;;   "Send a file to the REPL to load"
+;;   (interactive)
+;;   (or buffer (setq buffer (current-buffer)))
+;;   (let ((fn (buffer-file-name buffer)))
+;;     (stylish-send-command 'repl-load-file :filename fn)
+;;     (with-current-buffer (stylish-repl-get-buffer)
+;;       (stylish-repl-message (format "\n# Sending %s\n" fn)))))
 
 (defun stylish-repl-send-region-to-stylish (start end)
-  "Send region to stylish buffer"
+  "Send region to stylish buffer.
+Argument START and END define the region to send."
   (interactive "r")
   (let ((string (buffer-substring-no-properties start end)))
-    (with-current-buffer (stylish-repl-get-buffer)
+    (with-current-buffer (stylish-repl-get-buffer (ignore-errors (eproject-root)))
       (insert "\n")
       (stylish-repl-eval-perl string)))
   (when (eq (point) start) (exchange-point-and-mark))
@@ -240,11 +238,13 @@ the Perl REPL)"
   "Reconnect to the stylish server if output gets out of sync or something."
   (interactive)
   (stylish-repl-message "\nRestarting the Stylish REPL")
-  (stylish-send-message "kill_repl" '(:name "default")
-                        (lambda (&rest args)
-                          (with-current-buffer +stylish-repl-buffer
-                            (stylish-repl-insert-prompt)))))
-
+  (stylish-send-message "kill_repl" `(:name ,stylish-repl-name)
+                        (lambda (command result closure)
+                          (with-current-buffer (getf closure :buffer)
+                            (stylish-repl-insert-prompt)))
+                        nil
+                        `(:name ,stylish-repl-name
+                          :buffer ,(current-buffer))))
 
 (defun stylish-repl-history-cleanup nil
   "Remove all elements from the history ring that have a true
@@ -278,7 +278,7 @@ most recent, 50 is the oldest."
   (or id (setq id stylish-repl-history-id))
   (car (ring-ref stylish-repl-history id)))
 
-(defun stylish-repl--replace-region nil
+(defun stylish-repl--replace-region ()
   "Replace the region from START to END with H"
   (goto-char start)
   (delete-region start end)

@@ -31,21 +31,25 @@
 (defvar stylish-projects nil
   "List of project roots that have been registered.")
 
+(defun stylish-project-root (root)
+  (file-name-as-directory (expand-file-name root)))
+
+(defun stylish-project-name (root)
+  (file-name-nondirectory (directory-file-name (stylish-project-root root))))
+
 (add-hook 'stylish-reconnect-hook
           (lambda () (setf stylish-projects nil)))
-          
+
 (defun stylish-handle-project-responses (command result closure)
   (let ((on-change      (or (getf closure :on-change) 'stylish-null-function))
         (on-repl-change (or (getf closure :on-repl-change) 'stylish-null-function))
         (on-output      (or (getf closure :on-output) 'stylish-null-function)))
     (cond ((equal command "repl_output")
-           (funcall on-output
-                    (getf result :data)
-                    (getf closure :repl)))
+           (with-current-buffer (getf closure :repl-buffer)
+             (funcall on-output (getf result :data))))
           ((equal command "repl_generation_change")
-           (funcall on-repl-change
-                    (getf result :generation)
-                    (getf closure :repl)))
+           (with-current-buffer (getf closure :repl-buffer)
+             (funcall on-repl-change (getf result :generation))))
           ((equal command "project_change")
            (funcall on-change))
           ((equal command "register_project")
@@ -53,24 +57,26 @@
            (message "Registered '%s' successfully" (getf result :name)))))
   :keep-handler)
 
-(defun stylish-register-project (root &optional name on-change on-output on-repl-change)
-  "Register a project at ROOT with NAME.
+(defun stylish-register-project (root &optional on-change on-output on-repl-change closure)
+  "Register a project at ROOT.
 Optional argument ON-CHANGE is called whenever the project changes.
 Optional argument ON-OUTPUT is called when the inferior REPL produces output.
-Optional argument ON-REPL-CHANGE is called when the REPL is successfully reloaded."
-  (setf root (file-name-as-directory (expand-file-name root)))
+Optional argument ON-REPL-CHANGE is called when the REPL is successfully reloaded.
+Optional argument CLOSURE is data to pass to the callbacks."
+  (setf root (stylish-project-root root))
   (when (find root stylish-projects :test #'equal)
     (error "%s is already registered" root))
 
   (stylish-send-message
    "register_project"
-   (if name `(:root ,root :name ,name) `(:root ,root))
+   `(:root ,root)
    #'stylish-handle-project-responses
    #'stylish-null-function
    `(:root ,root
      :on-change ,on-change
      :on-output ,on-output
-     :on-repl-change ,on-repl-change)))
+     :on-repl-change ,on-repl-change
+     ,@closure)))
 
 (defun stylish-handle-unregistration-response (&rest dont-care)
   (let ((root (getf closure :root)))
@@ -82,10 +88,11 @@ Optional argument ON-REPL-CHANGE is called when the REPL is successfully reloade
     (setf stylish-projects
           (delete root stylish-projects))))
 
-(defun stylish-unregister-project (root)
-  "Stop watching ROOT in Stylish, and cleanup Emacs' handlers."
-  (setf root (file-name-as-directory (expand-file-name root)))
-  (when (not (find root stylish-projects :test #'equal))
+(defun stylish-unregister-project (root &optional force)
+  "Stop watching ROOT in Stylish, and cleanup Emacs' handlers.
+Optional argument FORCE skips the existence check."
+  (setf root (stylish-project-root root))
+  (when (and (not force) (not (find root stylish-projects :test #'equal)))
     (error "%s is not a registered project" root))
 
   (stylish-send-message
@@ -94,6 +101,21 @@ Optional argument ON-REPL-CHANGE is called when the REPL is successfully reloade
    'stylish-handle-unregistration-response
    'stylish-handle-unregistration-response
    `(:root ,root)))
+
+(defun stylish-project-repl ()
+  "Start or switch to this project's Stylish REPL."
+  (interactive)
+  (let ((buf (stylish-repl-get-buffer (stylish-project-name (eproject-root)))))
+    (stylish-register-project
+     (eproject-root)
+     nil
+     (lambda (output)
+       (stylish-repl-insert output 'stylish-repl-output-face))
+     (lambda (gen)
+       (stylish-repl-message (format "\nNow at generation %s" gen))
+       (stylish-repl-insert-prompt))
+     `(:repl-buffer ,buf))
+    (pop-to-buffer buf)))
 
 (provide 'stylish-project)
 ;;; stylish-project.el ends here

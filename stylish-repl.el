@@ -172,19 +172,20 @@ Optional argument NO-SELECT inhibits popping to the buffer."
                         `(:buffer ,(current-buffer))))
 
 (defun stylish-repl-send (&optional nosave)
-  "Send a command to the REPL"
+  "Send a command to the REPL."
   (interactive)
   (let* ((region (stylish-repl-input-region-bounds))
          (start (car region))
          (end (cdr region))
          (text (stylish-repl-input-region-text)))
-    (stylish-repl-usual-properties start end 'stylish-repl-sent-face)
-    (unless nosave (stylish-repl-history-add text))
-    (end-of-line)
-    (stylish-repl-insert "\n")
-    (if (string-match "^," text) ; perl or internal command?
-        (stylish-repl-process-internal-command text)
-      (stylish-repl-eval-perl text))))
+    (when (> (length text) 0)
+      (stylish-repl-usual-properties start end 'stylish-repl-sent-face)
+      (unless nosave (stylish-repl-history-add text))
+      (end-of-line)
+      (stylish-repl-insert "\n")
+      (if (string-match "^," text) ; perl or internal command?
+          (stylish-repl-process-internal-command text)
+        (stylish-repl-eval-perl text)))))
 
 (defun stylish-repl-get-buffer (&optional name)
   (cond (name (let ((buf (get-buffer (stylish-repl-name-for name))))

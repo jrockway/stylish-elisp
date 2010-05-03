@@ -112,7 +112,8 @@ Optional argument FORCE skips the existence check."
       (setf eproject-root root)
       (eproject-mode 1)
       (add-hook 'kill-buffer-hook
-                (lambda () (stylish-unregister-project (eproject-root)))
+                (lambda () (ignore-errors
+                            (stylish-unregister-project (eproject-root))))
                 nil t))
 
     (ignore-errors

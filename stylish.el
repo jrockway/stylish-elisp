@@ -78,11 +78,15 @@ Optional argument ARGS is optional.")
                                      :coding 'utf-8))
     (run-hooks 'stylish-reconnect-hook)))
 
+(defun stylish-running-p ()
+  "Return non-nil if connected to Stylish, nil otherwise."
+  (and stylish-process (eq (process-status stylish-process) 'open)))
+
 (defun stylish (&optional reconnect)
   "Connect to Stylish, if not already connected.
 Prefix argument RECONNECT forces a reconnect."
   (interactive "p")
-  (when (or (not stylish-process) (eq reconnect 4))
+  (when (or (not (stylish-running-p)) (eq reconnect 4))
     (stylish-connect)))
 
 (defun stylish-process-buffer ()
@@ -135,6 +139,7 @@ Argument ARGS are the args for the command, a plist."
 
 (defun stylish-send-message (command &optional args callback error-callback closure)
   "Send COMMAND with ARGS to the stylish server, and call CALLBACK with CLOSURE when the command is finished.  Call ERROR-CALLBACK on error."
+  (stylish) ;; ensure that we are connected
   (let* ((cookie (stylish-get-next-cookie))
          (message (stylish-message-encode command cookie args)))
     (setf stylish-outstanding-request-handlers

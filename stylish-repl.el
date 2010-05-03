@@ -250,7 +250,9 @@ Argument START and END define the region to send."
 (defun stylish-repl-interrupt nil
   "Interrupt execution of the current command without killing the whole REPL."
   (interactive)
-  (stylish-send-message "kill_repl" `(:name ,stylish-repl-name :signal 10)))
+  (stylish-send-message "kill_repl" `(:name ,stylish-repl-name :signal 10)
+                        (lambda (command result closure))
+                        (lambda (command result closure))))
 
 (defun stylish-repl-history-cleanup nil
   "Remove all elements from the history ring that have a true

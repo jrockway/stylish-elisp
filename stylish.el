@@ -90,13 +90,15 @@ Prefix argument RECONNECT forces a reconnect."
     (stylish-connect)))
 
 (defun stylish-process-buffer ()
-  (while (and (not (null stylish-partial-message))
-              (string-match "^\\([^\n]+\\)\n?\\(.*\\)" stylish-partial-message))
-    (let ((message (match-string 1 stylish-partial-message)))
-      (condition-case e
-          (stylish-process-message (stylish-json-decode message))
-          (error (message "Error processing stylish message '%s': %s" message e)))
-      (setf stylish-partial-message (match-string 2 stylish-partial-message)))))
+  (block :process
+    (while (and (not (null stylish-partial-message))
+                (string-match "^\\([^\n]+\\)\n?\\(.*\\)" stylish-partial-message))
+      (let ((message (match-string 1 stylish-partial-message)))
+        (condition-case e
+            (stylish-process-message (stylish-json-decode message))
+          ;;; XXX: buggy
+          (error (return-from :process)))
+        (setf stylish-partial-message (match-string 2 stylish-partial-message))))))
 
 (defun stylish-json-decode (string)
   (let ((json-object-type 'plist)

@@ -35,8 +35,12 @@
 (defun stylish-project-root (root)
   (file-name-as-directory (expand-file-name root)))
 
-(defun stylish-project-name (root)
-  (file-name-nondirectory (directory-file-name (stylish-project-root root))))
+(defun stylish-project-name (root &optional subproject)
+  (let ((base
+         (file-name-nondirectory (directory-file-name (stylish-project-root root)))))
+    (if subproject
+        (concat base "/" subproject)
+      base)))
 
 (add-hook 'stylish-reconnect-hook
           (lambda () (setf stylish-projects nil)))
@@ -58,7 +62,7 @@
            (message "Registered '%s' successfully" (getf result :name)))))
   :keep-handler)
 
-(defun stylish-register-project (root &optional on-change on-output on-repl-change closure)
+(defun stylish-register-project (root &optional subproject on-change on-output on-repl-change closure)
   "Register a project at ROOT.
 Optional argument ON-CHANGE is called whenever the project changes.
 Optional argument ON-OUTPUT is called when the inferior REPL produces output.
@@ -70,7 +74,7 @@ Optional argument CLOSURE is data to pass to the callbacks."
 
   (stylish-send-message
    "register_project"
-   `(:root ,root)
+   `(:root ,root ,@(when subproject (list :subproject subproject)))
    #'stylish-handle-project-responses
    #'stylish-null-function
    `(:root ,root
@@ -103,22 +107,27 @@ Optional argument FORCE skips the existence check."
    'stylish-handle-unregistration-response
    `(:root ,root)))
 
-(defun stylish-project-repl ()
-  "Start or switch to this project's Stylish REPL."
-  (interactive)
+(defun stylish-project-repl (&optional subproject)
+  "Start or switch to this project's Stylish REPL.
+Optional argument SUBPROJECT is the subproject to attempt to load."
+  (interactive "p")
+  (when (and (called-interactively-p) (= subproject 4))
+    (setf subproject (read-from-minibuffer "Subproject: ")))
+
   (let* ((root (eproject-root))
-         (buf (stylish-repl-get-buffer (stylish-project-name root))))
+         (buf (stylish-repl-get-buffer (stylish-project-name root subproject))))
 
     (with-current-buffer buf
       (setf eproject-root root)
       (eproject-mode 1)
       (add-hook 'kill-buffer-hook
+                ;; FIXME: incorrect for subprojects
                 (lambda () (ignore-errors
                             (stylish-unregister-project (eproject-root))))
                 nil t))
 
     (ignore-errors
-      (stylish-register-project root nil
+      (stylish-register-project root subproject nil
        (lambda (output)
          (stylish-repl-insert output 'stylish-repl-output-face)
          (when (string-match "^Modules failed to load in the new REPL" output)

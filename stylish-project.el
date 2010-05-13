@@ -26,6 +26,7 @@
 
 (require 'eproject)
 (require 'stylish)
+(require 'stylish-repl)
 (require 'cl)
 
 (defvar stylish-projects nil

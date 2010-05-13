@@ -90,20 +90,26 @@ Prefix argument RECONNECT forces a reconnect."
     (stylish-connect)))
 
 (defun stylish-process-buffer ()
-  (block :process
-    (while (and (not (null stylish-partial-message))
-                (string-match "^\\([^\n]+\\)\n?\\(.*\\)" stylish-partial-message))
-      (let ((message (match-string 1 stylish-partial-message)))
-        (condition-case e
-            (stylish-process-message (stylish-json-decode message))
-          ;;; XXX: buggy
-          (error (return-from :process)))
-        (setf stylish-partial-message (match-string 2 stylish-partial-message))))))
+  (with-temp-buffer ;; todo: make the buffer non-temp?
+    (while
+        (progn
+          (delete-region (point-min) (point-max))
+          (insert stylish-partial-message)
+          (goto-char (point-min))
+          (let* ((result (or (ignore-errors (stylish-json-decode))
+                             (progn (goto-char (point-min)) nil)))
+                 (rest   (progn
+                           (skip-chars-forward "\n")
+                           (buffer-substring-no-properties (point) (point-max)))))
+            (setf stylish-partial-message rest)
+            (when result
+              (stylish-process-message result))
+            result)))))
 
-(defun stylish-json-decode (string)
+(defun stylish-json-decode ()
   (let ((json-object-type 'plist)
         (json-array-type 'list))
-    (json-read-from-string string)))
+    (json-read)))
 
 (defun stylish-process-message (message)
   "Process the Stylish response represented MESSAGE."

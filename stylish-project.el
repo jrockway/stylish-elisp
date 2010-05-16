@@ -111,8 +111,12 @@ Optional argument FORCE skips the existence check."
   "Start or switch to this project's Stylish REPL.
 Optional argument SUBPROJECT is the subproject to attempt to load."
   (interactive "p")
-  (when (and (called-interactively-p) (= subproject 4))
-    (setf subproject (read-from-minibuffer "Subproject: ")))
+
+  ;; fixup the subproject when called interactively
+  (cond ((and (called-interactively-p) (= subproject 4))
+         (setf subproject (read-from-minibuffer "Subproject: ")))
+        ((called-interactively-p)
+         (setf subproject nil)))
 
   (let* ((root (eproject-root))
          (buf (stylish-repl-get-buffer (stylish-project-name root subproject))))

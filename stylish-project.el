@@ -133,12 +133,10 @@ Optional argument SUBPROJECT is the subproject to attempt to load."
     (ignore-errors
       (stylish-register-project root subproject nil
        (lambda (output)
-         (stylish-repl-insert output 'stylish-repl-output-face)
-         (when (string-match "^Modules failed to load in the new REPL" output)
-           (stylish-repl-insert-prompt)))
+         (stylish-repl-insert-beforeprompt output 'stylish-repl-output-face))
        (lambda (gen)
-         (stylish-repl-message (format "\nNow at generation %s" gen))
-         (stylish-repl-insert-prompt))
+         (stylish-repl-insert-beforeprompt (format "Now at generation %s\n" gen) 'stylish-repl-message-face))
+
        `(:repl-buffer ,buf)))
     (pop-to-buffer buf)))
 

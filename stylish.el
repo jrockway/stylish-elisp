@@ -40,6 +40,12 @@
 (defvar stylish-reconnect-hook nil
   "Hook to run on connect or reconnect.")
 
+(defgroup stylish nil
+  "Stylish; make working with Perl more enjoyable"
+  :prefix "stylish-"
+  :group 'tools
+  :link '(url-link :tag "Project repository" "http://github.com/jrockway/stylish"))
+
 (add-hook 'stylish-reconnect-hook
           (lambda () (setf stylish-outstanding-request-handlers nil)))
 

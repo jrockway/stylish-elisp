@@ -9,16 +9,16 @@
 (defvar stylish-repl-name nil
   "The name of this REPL, according to the Stylish server.")
 
-(make-variable-buffer-local 'stylish-repl-history)
-(make-variable-buffer-local 'stylish-repl-history-id)
-(make-variable-buffer-local 'stylish-repl-name)
+(defvar stylish-repl-internal-commands-alist nil
+  "Dispatch table for repl internal commands, elements are of the form:
+   (name . function")
 
 (defvar stylish-repl-prompt-map nil
   "Keymap used when at the PERL> prompt")
 
-(defvar stylish-repl-internal-commands-alist nil
-  "Dispatch table for repl internal commands, elements are of the form:
-   (name . function")
+(make-variable-buffer-local 'stylish-repl-history)
+(make-variable-buffer-local 'stylish-repl-history-id)
+(make-variable-buffer-local 'stylish-repl-name)
 
 ; custom
 
@@ -132,10 +132,24 @@ Optional argument NO-SELECT inhibits popping to the buffer."
   "Insert a system-generated message"
   (stylish-repl-insert (concat message "\n") 'stylish-repl-message-face))
 
+(defun stylish-repl-beforeprompt ()
+  "Return the position right before the prompt, or at the end of the buffer if there is no prompt."
+  (or (ignore-errors
+        (save-excursion
+          (goto-char (car (stylish-repl-input-region-bounds)))
+          (line-beginning-position)))
+      (point-max)))
+
+(defun stylish-repl-insert-beforeprompt (message &optional face)
+  (save-excursion
+    (goto-char (stylish-repl-beforeprompt))
+    (stylish-repl-insert message face)))
+
 (defun stylish-repl-input-region-bounds nil
-  "Determine the Stylish input region"
+  "Determine the Stylish input region."
   ;; XXX: rewrite this to use properties instead of regexen!
   (save-excursion
+    (goto-char (point-max))
     (let ((inhibit-point-motion-hooks t))
       (re-search-backward "PERL> "))
     (let ((start (match-end 0))

@@ -240,9 +240,10 @@ Argument START and END define the region to send."
   (deactivate-mark))
 
 (defun stylish-repl-insert-prompt nil
-  "Insert the REPL prompt"
+  "Insert the REPL prompt."
   (stylish-repl-insert "PERL>" font-lock-keyword-face)
-  (let ((inhibit-read-only t)) (insert (propertize " " 'read-only nil)))
+  (let ((inhibit-read-only t))
+    (insert (propertize " " 'rear-nonsticky t 'read-only t)))
   (goto-char (point-max))
   (set-window-point (get-buffer-window (current-buffer)) (point-max)))
 

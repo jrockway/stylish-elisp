@@ -159,7 +159,7 @@ Argument ARGS are the args for the command, a plist."
     (setf stylish-outstanding-request-handlers
           (cons (list cookie closure callback error-callback)
                 stylish-outstanding-request-handlers))
-    (process-send-string stylish-process (concat message "\n"))))
+    (process-send-string stylish-process (concat message "\015\012"))))
 
 (provide 'stylish)
 ;;; stylish.el ends here

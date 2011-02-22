@@ -117,9 +117,15 @@ Prefix argument RECONNECT forces a reconnect."
         (json-array-type 'list))
     (json-read)))
 
+(defun stylish-parse-integer (int)
+  (case (type-of int)
+    ('integer int)
+    ('sequence (parse-integer int))
+    (t nil)))
+
 (defun stylish-process-message (message)
   "Process the Stylish response represented MESSAGE."
-  (let* ((cookie  (parse-integer (getf message :cookie)))
+  (let* ((cookie  (stylish-parse-integer (getf message :cookie)))
          (command (getf message :command))
          (result  (getf message :result))
          (error   (getf message :error)))

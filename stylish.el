@@ -84,6 +84,23 @@ Optional argument ARGS is optional.")
                                      :coding 'utf-8))
     (run-hooks 'stylish-reconnect-hook)))
 
+(defun stylish-tcp-connect ()
+  "Connect to a stylish Stylish server running over TCP."
+  (interactive)
+  (when stylish-process
+    (delete-process stylish-process)
+    (setf stylish-partial-message nil))
+  (prog1 (setf stylish-process
+               (make-network-process :name "stylish"
+                                     :host "localhost"
+                                     :family 'ipv4
+                                     :service 4343
+                                     :noquery t
+                                     :filter #'stylish-filter
+                                     :sentinel #'stylish-sentinel
+                                     :coding 'utf-8 ))
+    (run-hooks 'stylish-reconnect-hook)))
+
 (defun stylish-running-p ()
   "Return non-nil if connected to Stylish, nil otherwise."
   (and stylish-process (eq (process-status stylish-process) 'open)))

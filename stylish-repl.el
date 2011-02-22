@@ -172,7 +172,7 @@ Optional argument NO-SELECT inhibits popping to the buffer."
       (cond ((equal command "repl")
              (let ((face (if (= 0 success)
                              'stylish-repl-error-face 'stylish-repl-result-face)))
-               (stylish-repl-insert (concat result "\n") face))
+               (stylish-repl-insert  (format "%s\n" result) face))
              (stylish-repl-insert-prompt))
 
           ((equal command "repl_output")

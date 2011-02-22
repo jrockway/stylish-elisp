@@ -18,9 +18,65 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+;;; See-also:
+
+;; stylish-repl.el, a generic read-eval-print-loop for stylish.
+
+;;; Wire protocol:
+
+;; A bit about the wire protocol.  All requests and responses are JSON
+;; objects separated by \r\n.
+;;
+;; When the client (stylish.el, etc.) connects to a server
+;; (Stylish::Server for Perl, MozRepl in Stylish mode, etc.), the
+;; server sends a welcome message, which is a JSON object of the form:
+;;
+;; { command: "welcome", session: <session id>, ... }
+;;
+;; session is some sort of session id.  <...> can be anything.
+;; Typically the version number of the server is sent, but stylish.el
+;; does not care right now.
+;;
+;; The interaction then continues asynchronously; the client may send
+;; commands at any time, and the server may send responses (or other
+;; data) at any time.
+;;
+;; The client initiates a command by first generating a unique number,
+;; the cookie.  It then sends:
+;;
+;; { command: <command name>, cookie: <cookie>, args ... }
+;;
+;; args are arbitrary key/value pairs that are the args for command.
+;; The cookie is mandatory.
+;;
+;; The server will reply to this command with a message of the form:
+;;
+;; { command: <reply name>, cookie: <cookie>, result: { <result> } }
+;;
+;; or
+;;
+;; { command: <reply name>, cookie: <cookie>, error: "<error message>" }
+;;
+;; The reply name is typically the command that the server is replying
+;; to, but some commands have multiple reply types.  The cookie is the
+;; cookie that the client sent to the server, identifying that this
+;; message is a reply to that command.
+;;
+;; A successful result is indicated by the presense of a result key
+;; containing a dictionary of results.  An error response is indicated
+;; by the error key, which maps to an error message.
+;;
+;; See the code below to see how to connect to something that speaks
+;; the Stylish protocol.
+
 ;;; Commentary:
 
-;;
+;; The basic model for the Emacs binding is to first connect with
+;; `stylish-connect' or `stylish-tcp-connect', and then to send
+;; commands with `stylish-send-message'.  When a reply is ready (based
+;; on the auto-generated cookie), your callback will be called with
+;; the results merged with closure.  If there is an error, the
+;; error-callback will be called instead.
 
 ;;; Code:
 
@@ -175,7 +231,7 @@ Argument ARGS are the args for the command, a plist."
   (json-encode (append (list :cookie cookie :command command) args)))
 
 (defun stylish-send-message (command &optional args callback error-callback closure)
-  "Send COMMAND with ARGS to the stylish server, and call CALLBACK with CLOSURE when the command is finished.  Call ERROR-CALLBACK on error."
+  "Send COMMAND with ARGS (a plist) to the stylish server, and call CALLBACK with CLOSURE when the command is finished.  Call ERROR-CALLBACK on error."
   (stylish) ;; ensure that we are connected
   (let* ((cookie (stylish-get-next-cookie))
          (message (stylish-message-encode command cookie args)))

@@ -59,7 +59,9 @@ the Perl REPL)"
   :group 'stylish-repl)
 
 (defun stylish-repl-name-for (name)
-  (concat "*Stylish REPL " name "*"))
+  (if (not name)
+      "*Stylish REPL default*"
+    (concat "*Stylish REPL " name "*")))
 
 (defun stylish-repl (&optional name no-select)
   "Spawn a Stylish REPL buffer.
@@ -202,10 +204,12 @@ Optional argument NO-SELECT inhibits popping to the buffer."
         (stylish-repl-eval-perl text)))))
 
 (defun stylish-repl-get-buffer (&optional name)
-  (cond (name (let ((buf (get-buffer (stylish-repl-name-for name))))
-                (if buf buf
-                  (stylish-repl name t))))
-        (t (current-buffer))))
+  (if (and (eq major-mode 'stylish-repl-mode)
+           (not name))
+      (current-buffer)
+    (let ((buf (get-buffer (stylish-repl-name-for name))))
+      (if buf buf
+        (stylish-repl name t)))))
 
 (defun stylish-repl-process-internal-command (command)
   "Run the internal command COMMAND."

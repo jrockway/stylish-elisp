@@ -84,9 +84,9 @@ Optional argument ARGS is optional.")
                                      :coding 'utf-8))
     (run-hooks 'stylish-reconnect-hook)))
 
-(defun stylish-tcp-connect ()
+(defun stylish-tcp-connect (&optional port)
   "Connect to a stylish Stylish server running over TCP."
-  (interactive)
+  (interactive "nPort number: ")
   (when stylish-process
     (delete-process stylish-process)
     (setf stylish-partial-message nil))
@@ -94,7 +94,7 @@ Optional argument ARGS is optional.")
                (make-network-process :name "stylish"
                                      :host "localhost"
                                      :family 'ipv4
-                                     :service 4343
+                                     :service port
                                      :noquery t
                                      :filter #'stylish-filter
                                      :sentinel #'stylish-sentinel

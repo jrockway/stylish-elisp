@@ -145,7 +145,18 @@ Optional argument NO-SELECT inhibits popping to the buffer."
 (defun stylish-repl-insert-beforeprompt (message &optional face)
   (save-excursion
     (goto-char (stylish-repl-beforeprompt))
-    (stylish-repl-insert message face)))
+    (stylish-repl-insert message face)
+    (when (and (looking-at "PERL>")
+               (prog1 (looking-at "\n") (backward-char)))
+      (let ((inhibit-read-only t))
+        (insert "\n")))))
+
+(defun stylish-repl-maybe-insert-beforeprompt (message &optional face)
+  (save-excursion
+    (beginning-of-line)
+    (if (looking-at "PERL> ")
+        (stylish-repl-insert-beforeprompt message face)
+      (stylish-repl-insert message face))))
 
 (defun stylish-repl-input-region-bounds nil
   "Determine the Stylish input region."
@@ -166,20 +177,25 @@ Optional argument NO-SELECT inhibits popping to the buffer."
          (text (buffer-substring-no-properties start end)))
     text))
 
+(defun stylish-repl--do-insert ()
+  (save-excursion
+    (goto-char (point-max))
+    (cond ((equal command "repl")
+           (let ((face (if (= 0 success)
+                           'stylish-repl-error-face 'stylish-repl-result-face)))
+             (stylish-repl-insert  (format "%s\n" result) face))
+           (stylish-repl-insert-prompt)
+           (point-max))
+
+          ((equal command "repl_output")
+           (stylish-repl-maybe-insert-beforeprompt data 'stylish-repl-output-face)
+           nil))))
+
 (defun* stylish-handler-repl (command (&key result success data repl) (&key buffer))
   "Handle a return from the REPL"
   (with-current-buffer buffer
-    (save-excursion
-      (goto-char (point-max))
-      (cond ((equal command "repl")
-             (let ((face (if (= 0 success)
-                             'stylish-repl-error-face 'stylish-repl-result-face)))
-               (stylish-repl-insert  (format "%s\n" result) face))
-             (stylish-repl-insert-prompt))
-
-          ((equal command "repl_output")
-           (stylish-repl-insert data 'stylish-repl-output-face))))
-    (goto-char (point-max)))
+    (let ((move-to (stylish-repl--do-insert)))
+      (when move-to (goto-char move-to))))
     :keep-handler)
 
 (defun stylish-repl-eval-perl (perl)

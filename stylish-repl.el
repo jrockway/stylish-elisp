@@ -82,6 +82,22 @@ Optional argument NO-SELECT inhibits popping to the buffer."
     (when (not no-select) (display-buffer buf))
     buf))
 
+(defun stylish-repl-get-prompt ()
+  (stylish-send-message "repl_prompt" `()
+                        'stylish-handler-repl-prompt nil
+                        `(:buffer ,(current-buffer))))
+
+(defun* stylish-handler-repl-prompt (command (&key prompt) (&key buffer))
+  "Handle a return from the REPL"
+  (message "setting prompt to %s" prompt)
+  (with-current-buffer (or buffer (current-buffer))
+    (when prompt
+      (setq stylish-repl-prompt prompt)
+      (when (not (save-excursion
+                   (beginning-of-line)
+                   (stylish-repl-looking-at-prompt-p)))
+        (stylish-repl-insert-prompt)))))
+
 (define-derived-mode stylish-repl-mode fundamental-mode "Stylish[REPL]"
   "The major mode for the Stylish REPL buffer."
 
@@ -101,7 +117,7 @@ Optional argument NO-SELECT inhibits popping to the buffer."
 
   (stylish)
   (stylish-repl-message "Welcome to the Stylish REPL!")
-  (stylish-repl-insert-prompt))
+  (stylish-repl-get-prompt))
 
 (defun stylish-repl-register-command (command function)
   "Add a new command to the repl internal commands dispatch table."

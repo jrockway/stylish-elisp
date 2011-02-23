@@ -124,11 +124,13 @@ Optional argument NO-SELECT inhibits popping to the buffer."
     (put-text-property start end 'rear-nonsticky '(face intangible))
     (put-text-property start end 'read-only t)))
 
-(defun stylish-repl-insert (text &optional face)
+(defun stylish-repl-insert (text &optional face properties)
   "Insert immutable text into the Stylish REPL buffer"
   (let ((inhibit-read-only t) (begin (point)))
     (insert text)
-    (stylish-repl-usual-properties begin (point) face)))
+    (stylish-repl-usual-properties begin (point) face)
+    (when properties
+      (add-text-properties begin (point) properties))))
 
 (defun stylish-repl-message (message)
   "Insert a system-generated message"
@@ -261,7 +263,8 @@ Argument START and END define the region to send."
 
 (defun stylish-repl-insert-prompt nil
   "Insert the REPL prompt."
-  (stylish-repl-insert "PERL>" font-lock-keyword-face)
+  (stylish-repl-insert "PERL>" font-lock-keyword-face
+                       '(repl-prompt t))
   (let ((inhibit-read-only t))
     (insert (propertize " " 'rear-nonsticky t 'read-only t)))
   (goto-char (point-max))

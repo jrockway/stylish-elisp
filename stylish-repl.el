@@ -14,11 +14,15 @@
    (name . function")
 
 (defvar stylish-repl-prompt-map nil
-  "Keymap used when at the PERL> prompt")
+  "Keymap used when at the repl prompt")
+
+(defvar stylish-repl-prompt "PERL>"
+  "Text of the prompt (buffer-local).  A space is inserted after this.")
 
 (make-variable-buffer-local 'stylish-repl-history)
 (make-variable-buffer-local 'stylish-repl-history-id)
 (make-variable-buffer-local 'stylish-repl-name)
+(make-variable-buffer-local 'stylish-repl-prompt)
 
 ; custom
 
@@ -144,11 +148,25 @@ Optional argument NO-SELECT inhibits popping to the buffer."
           (line-beginning-position)))
       (point-max)))
 
+(defun stylish-repl-looking-at-prompt-p ()
+  "Return T if we are `looking-at' the prompt."
+  (and (or (ignore-errors (not (get-char-property (1- (point)) 'repl-prompt)))
+           (= (point) (point-min)))
+       (get-char-property (point) 'repl-prompt)))
+
+(defun stylish-repl-find-last-prompt ()
+  "Return a cons cell representing the position of the most recent REPL prompt."
+  (condition-case e
+      (let* ((end (previous-single-property-change (point-max) 'repl-prompt))
+             (start (previous-single-property-change end 'repl-prompt)))
+        (cons start end))
+    (error (error "Cannot find a REPL prompt!"))))
+
 (defun stylish-repl-insert-beforeprompt (message &optional face)
   (save-excursion
     (goto-char (stylish-repl-beforeprompt))
     (stylish-repl-insert message face)
-    (when (and (looking-at "PERL>")
+    (when (and (stylish-repl-looking-at-prompt-p)
                (prog1 (looking-at "\n") (backward-char)))
       (let ((inhibit-read-only t))
         (insert "\n")))))
@@ -156,20 +174,16 @@ Optional argument NO-SELECT inhibits popping to the buffer."
 (defun stylish-repl-maybe-insert-beforeprompt (message &optional face)
   (save-excursion
     (beginning-of-line)
-    (if (looking-at "PERL> ")
+    (if (stylish-repl-looking-at-prompt-p)
         (stylish-repl-insert-beforeprompt message face)
       (stylish-repl-insert message face))))
 
 (defun stylish-repl-input-region-bounds nil
   "Determine the Stylish input region."
-  ;; XXX: rewrite this to use properties instead of regexen!
-  (save-excursion
-    (goto-char (point-max))
-    (let ((inhibit-point-motion-hooks t))
-      (re-search-backward "PERL> "))
-    (let ((start (match-end 0))
-          (end   (point-max)))
-      (cons start end))))
+  (destructuring-bind (prompt-start . prompt-end)
+      (stylish-repl-find-last-prompt)
+    ;;(stylish-repl-minor-mode-flash-region (1+ prompt-end) (point-max))
+    (cons (1+ prompt-end) (point-max))))
 
 (defun stylish-repl-input-region-text nil
   "Return the text inside `stylish-repl-input-region-bounds'."
@@ -263,7 +277,7 @@ Argument START and END define the region to send."
 
 (defun stylish-repl-insert-prompt nil
   "Insert the REPL prompt."
-  (stylish-repl-insert "PERL>" font-lock-keyword-face
+  (stylish-repl-insert stylish-repl-prompt font-lock-keyword-face
                        '(repl-prompt t))
   (let ((inhibit-read-only t))
     (insert (propertize " " 'rear-nonsticky t 'read-only t)))

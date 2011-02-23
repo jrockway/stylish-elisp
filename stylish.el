@@ -213,9 +213,13 @@ Prefix argument RECONNECT forces a reconnect."
                                      (lambda (&rest args)
                                        (message "stylish: error: %s" error))))
                   (handler-result
-                   (if error
-                       (funcall error-handler error closure)
-                     (funcall handler command result closure))))
+                   (condition-case e
+                       (if error
+                           (funcall error-handler error closure)
+                         (funcall handler command result closure))
+                     (error
+                      (error "Problem handling message (%s) from Stylish server: %s"
+                             message e)))))
              (when (not (eq handler-result :keep-handler))
                (setf stylish-outstanding-request-handlers
                      (assq-delete-all cookie stylish-outstanding-request-handlers)))))

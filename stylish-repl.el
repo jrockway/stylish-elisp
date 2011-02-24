@@ -89,7 +89,6 @@ Optional argument NO-SELECT inhibits popping to the buffer."
 
 (defun* stylish-handler-repl-prompt (command (&key prompt) (&key buffer))
   "Handle a return from the REPL"
-  (message "setting prompt to %s" prompt)
   (with-current-buffer (or buffer (current-buffer))
     (when prompt
       (setq stylish-repl-prompt prompt)

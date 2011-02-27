@@ -95,7 +95,8 @@ Optional argument NO-SELECT inhibits popping to the buffer."
       (when (not (save-excursion
                    (beginning-of-line)
                    (stylish-repl-looking-at-prompt-p)))
-        (stylish-repl-insert-prompt)))))
+        (stylish-repl-insert-prompt))))
+  :keep-handler)
 
 (define-derived-mode stylish-repl-mode fundamental-mode "Stylish[REPL]"
   "The major mode for the Stylish REPL buffer."

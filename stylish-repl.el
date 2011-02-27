@@ -16,7 +16,7 @@
 (defvar stylish-repl-prompt-map nil
   "Keymap used when at the repl prompt")
 
-(defvar stylish-repl-prompt "PERL>"
+(defvar stylish-repl-prompt "REPL>"
   "Text of the prompt (buffer-local).  A space is inserted after this.")
 
 (make-variable-buffer-local 'stylish-repl-history)

@@ -93,6 +93,9 @@
 
 (defvar stylish-process nil)
 
+(defvar stylish-last-connectinfo nil
+  "Cons cell of (connect-function . args) to be used for reconnection.")
+
 (defvar stylish-reconnect-hook nil
   "Hook to run on connect or reconnect.")
 
@@ -138,6 +141,7 @@ Optional argument ARGS is optional.")
                                      :filter #'stylish-filter
                                      :sentinel #'stylish-sentinel
                                      :coding 'utf-8))
+    (setq stylish-last-connectinfo (list #'stylish-connect))
     (run-hooks 'stylish-reconnect-hook)))
 
 (defun stylish-tcp-connect (&optional port)
@@ -155,6 +159,7 @@ Optional argument ARGS is optional.")
                                      :filter #'stylish-filter
                                      :sentinel #'stylish-sentinel
                                      :coding 'utf-8 ))
+    (setq stylish-last-connectinfo (list #'stylish-tcp-connect port))
     (run-hooks 'stylish-reconnect-hook)))
 
 (defun stylish-running-p ()
@@ -166,7 +171,11 @@ Optional argument ARGS is optional.")
 Prefix argument RECONNECT forces a reconnect."
   (interactive "p")
   (when (or (not (stylish-running-p)) (eq reconnect 4))
-    (stylish-connect)))
+    (when (null stylish-last-connectinfo)
+      (error "Never connected to Stylish in this session!"))
+    (destructuring-bind (func &rest args) stylish-last-connectinfo
+      (apply func args))))
+
 
 (defun stylish-process-buffer ()
   (with-temp-buffer ;; todo: make the buffer non-temp?

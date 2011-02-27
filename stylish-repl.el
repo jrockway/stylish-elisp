@@ -13,7 +13,16 @@
   "Dispatch table for repl internal commands, elements are of the form:
    (name . function")
 
-(defvar stylish-repl-prompt-map nil
+(defvar stylish-repl-prompt-map
+  (let ((k (make-sparse-keymap)))
+    (set-keymap-parent k stylish-repl-mode-map)
+    (define-key k (kbd "<RET>") 'stylish-repl-send)
+    (define-key k (kbd "C-a") 'stylish-repl-beginning-of-line)
+    (define-key k (kbd "C-c c") 'stylish-repl-OH-NOES!!11!)
+    (define-key k (kbd "C-c C-c") 'stylish-repl-interrupt)
+    (define-key k (kbd "M-p") 'stylish-repl-history-up)
+    (define-key k (kbd "M-n") 'stylish-repl-history-down)
+    k)
   "Keymap used when at the repl prompt")
 
 (defvar stylish-repl-prompt "REPL>"
@@ -100,17 +109,6 @@ Optional argument NO-SELECT inhibits popping to the buffer."
 
 (define-derived-mode stylish-repl-mode fundamental-mode "Stylish[REPL]"
   "The major mode for the Stylish REPL buffer."
-
-  (setq stylish-repl-prompt-map
-        (let ((k (make-sparse-keymap)))
-          (set-keymap-parent k stylish-repl-mode-map)))
-
-  (define-key stylish-repl-prompt-map (kbd "<RET>") 'stylish-repl-send)
-  (define-key stylish-repl-prompt-map (kbd "C-a") 'stylish-repl-beginning-of-line)
-  (define-key stylish-repl-prompt-map (kbd "C-c c") 'stylish-repl-OH-NOES!!11!)
-  (define-key stylish-repl-prompt-map (kbd "C-c C-c") 'stylish-repl-interrupt)
-  (define-key stylish-repl-prompt-map (kbd "M-p") 'stylish-repl-history-up)
-  (define-key stylish-repl-prompt-map (kbd "M-n") 'stylish-repl-history-down)
 
   (when (boundp 'cperl-mode-syntax-table)
     (set-syntax-table cperl-mode-syntax-table))

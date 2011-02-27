@@ -202,6 +202,7 @@ Prefix argument RECONNECT forces a reconnect."
 (defun stylish-parse-integer (int)
   (case (type-of int)
     ('integer int)
+    ('string (parse-integer int))
     ('sequence (parse-integer int))
     (t nil)))
 

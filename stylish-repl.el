@@ -140,6 +140,7 @@ Optional argument NO-SELECT inhibits popping to the buffer."
   (let ((inhibit-read-only t)) ; fuck you, read-only.
     (when face (put-text-property start end 'face face))
     ;(put-text-property start end 'intangible t)
+    (put-text-property start end 'field nil)
     (put-text-property start end 'rear-nonsticky '(face intangible))
     (put-text-property start end 'read-only t)))
 
@@ -292,10 +293,13 @@ Argument START and END define the region to send."
 
 (defun stylish-repl-insert-prompt nil
   "Insert the REPL prompt."
-  (stylish-repl-insert stylish-repl-prompt font-lock-keyword-face
-                       '(repl-prompt t))
+  (stylish-repl-insert stylish-repl-prompt font-lock-keyword-face '(repl-prompt t))
   (let ((inhibit-read-only t))
-    (insert (propertize " " 'rear-nonsticky t 'read-only t)))
+    (insert (propertize " "
+                        'rear-nonsticky '(read-only face intangible)
+                        'read-only t
+                        'keymap stylish-repl-prompt-map
+                        'field 'user-input)))
   (goto-char (point-max))
   (set-window-point (get-buffer-window (current-buffer)) (point-max)))
 

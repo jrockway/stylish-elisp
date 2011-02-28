@@ -359,10 +359,13 @@ most recent, 50 is the oldest."
   (car (ring-ref stylish-repl-history id)))
 
 (defun stylish-repl--replace-region ()
-  "Replace the region from START to END with H"
+  "Replace the region from START to END with H.
+
+Propertizes as though the input was typed by the user after the
+prompt."
   (goto-char start)
   (delete-region start end)
-  (insert h)
+  (insert (propertize h 'keymap stylish-repl-prompt-map 'field 'user-input))
   (goto-char (point-max)))
 
 (add-hook 'stylish-repl-history-pre-hook

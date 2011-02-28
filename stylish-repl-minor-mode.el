@@ -53,7 +53,7 @@ The following keys are bound in this minor mode:
     (run-with-timer (or timeout 0.2) nil 'delete-overlay overlay)))
 
 (defun stylish-repl-minor-mode-send-defun ()
-  "Send the current function to the Stylish REPL."
+  "Send the current function to the current Stylish REPL instance."
   (interactive)
   (save-excursion
     (mark-defun)

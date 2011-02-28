@@ -26,7 +26,10 @@
 
 (defvar stylish-repl-minor-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "\C-\M-x"  'stylish-repl-minor-mode-send-defun)
+    (define-key map "\C-\M-x" 'stylish-repl-minor-mode-send-defun)
+    ;; this is the binding that SLIME picks, so I thought I would be
+    ;; consistent, even though it is already used for "compile".
+    (define-key map "\C-c\C-k" 'stylish-repl-minor-mode-send-buffer)
     map))
 
 (define-minor-mode stylish-repl-minor-mode
@@ -56,6 +59,11 @@ The following keys are bound in this minor mode:
     (mark-defun)
     (stylish-repl-minor-mode-flash-region (point) (mark))
     (stylish-repl-send-region-to-stylish (point) (mark))))
+
+(defun stylish-repl-minor-mode-send-buffer ()
+  "Send the text of the current buffer to the current Stylish REPL instance."
+  (interactive)
+  (stylish-repl-send-region-to-stylish (point-min) (point-max)))
 
 (provide 'stylish-repl-minor-mode)
 ;;; stylish-repl-minor-mode.el ends here

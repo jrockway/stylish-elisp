@@ -33,8 +33,7 @@
 "Send code from the current buffer to a Stylish REPL.
 
 The following keys are bound in this minor mode:
-
-\\{moz-minor-mode-map}"
+\\{stylish-repl-minor-mode-map}"
   nil
   " Stylish[REPL]"
   :keymap stylish-repl-minor-mode-map

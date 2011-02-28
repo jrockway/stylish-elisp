@@ -13,18 +13,6 @@
   "Dispatch table for repl internal commands, elements are of the form:
    (name . function")
 
-(defvar stylish-repl-prompt-map
-  (let ((k (make-sparse-keymap)))
-    (set-keymap-parent k stylish-repl-mode-map)
-    (define-key k (kbd "<RET>") 'stylish-repl-send)
-    (define-key k (kbd "C-a") 'stylish-repl-beginning-of-line)
-    (define-key k (kbd "C-c c") 'stylish-repl-OH-NOES!!11!)
-    (define-key k (kbd "C-c C-c") 'stylish-repl-interrupt)
-    (define-key k (kbd "M-p") 'stylish-repl-history-up)
-    (define-key k (kbd "M-n") 'stylish-repl-history-down)
-    k)
-  "Keymap used when at the repl prompt")
-
 (defvar stylish-repl-prompt "REPL>"
   "Text of the prompt (buffer-local).  A space is inserted after this.")
 
@@ -71,6 +59,29 @@
 the Perl REPL)"
   :group 'stylish-repl)
 
+(define-derived-mode stylish-repl-mode fundamental-mode "Stylish[REPL]"
+  "The major mode for the Stylish REPL buffer."
+  :group 'stylish-repl
+
+  (when (boundp 'cperl-mode-syntax-table)
+    (set-syntax-table cperl-mode-syntax-table))
+
+  (stylish)
+  (stylish-repl-message "Welcome to the Stylish REPL!")
+  (stylish-repl-get-prompt))
+
+(defvar stylish-repl-prompt-map
+  (let ((k (make-sparse-keymap)))
+    (set-keymap-parent k stylish-repl-mode-map)
+    (define-key k (kbd "<RET>") 'stylish-repl-send)
+    (define-key k (kbd "C-a") 'stylish-repl-beginning-of-line)
+    (define-key k (kbd "C-c c") 'stylish-repl-OH-NOES!!11!)
+    (define-key k (kbd "C-c C-c") 'stylish-repl-interrupt)
+    (define-key k (kbd "M-p") 'stylish-repl-history-up)
+    (define-key k (kbd "M-n") 'stylish-repl-history-down)
+    k)
+  "Keymap used when at the repl prompt")
+
 (defun stylish-repl-name-for (name)
   (if (not name)
       "*Stylish REPL default*"
@@ -106,16 +117,6 @@ Optional argument NO-SELECT inhibits popping to the buffer."
                    (stylish-repl-looking-at-prompt-p)))
         (stylish-repl-insert-prompt))))
   :keep-handler)
-
-(define-derived-mode stylish-repl-mode fundamental-mode "Stylish[REPL]"
-  "The major mode for the Stylish REPL buffer."
-
-  (when (boundp 'cperl-mode-syntax-table)
-    (set-syntax-table cperl-mode-syntax-table))
-
-  (stylish)
-  (stylish-repl-message "Welcome to the Stylish REPL!")
-  (stylish-repl-get-prompt))
 
 (defun stylish-repl-register-command (command function)
   "Add a new command to the repl internal commands dispatch table."

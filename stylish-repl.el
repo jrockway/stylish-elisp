@@ -70,17 +70,18 @@ the Perl REPL)"
   (stylish-repl-message "Welcome to the Stylish REPL!")
   (stylish-repl-get-prompt))
 
+(let ((k stylish-repl-mode-map))
+  (define-key k (kbd "<RET>") 'stylish-repl-send)
+  (define-key k (kbd "C-c c") 'stylish-repl-OH-NOES!!11!)
+  (define-key k (kbd "C-c C-c") 'stylish-repl-interrupt)
+  (define-key k (kbd "M-p") 'stylish-repl-history-up)
+  (define-key k (kbd "M-n") 'stylish-repl-history-down))
+
 (defvar stylish-repl-prompt-map
   (let ((k (make-sparse-keymap)))
     (set-keymap-parent k stylish-repl-mode-map)
-    (define-key k (kbd "<RET>") 'stylish-repl-send)
-    (define-key k (kbd "C-a") 'stylish-repl-beginning-of-line)
-    (define-key k (kbd "C-c c") 'stylish-repl-OH-NOES!!11!)
-    (define-key k (kbd "C-c C-c") 'stylish-repl-interrupt)
-    (define-key k (kbd "M-p") 'stylish-repl-history-up)
-    (define-key k (kbd "M-n") 'stylish-repl-history-down)
     k)
-  "Keymap used when at the repl prompt")
+  "Keymap used when at the repl prompt.")
 
 (defun stylish-repl-name-for (name)
   (if (not name)
@@ -140,8 +141,8 @@ Optional argument NO-SELECT inhibits popping to the buffer."
   (let ((inhibit-read-only t)) ; fuck you, read-only.
     (when face (put-text-property start end 'face face))
     ;(put-text-property start end 'intangible t)
-    (put-text-property start end 'field nil)
-    (put-text-property start end 'rear-nonsticky '(face intangible))
+    (put-text-property start end 'field 'output)
+    (put-text-property start end 'rear-nonsticky '(face intangible field read-only))
     (put-text-property start end 'read-only t)))
 
 (defun stylish-repl-insert (text &optional face properties)
@@ -160,8 +161,9 @@ Optional argument NO-SELECT inhibits popping to the buffer."
   "Return the position right before the prompt, or at the end of the buffer if there is no prompt."
   (or (ignore-errors
         (save-excursion
-          (goto-char (car (stylish-repl-input-region-bounds)))
-          (line-beginning-position)))
+          (let ((inhibit-field-text-motion t))
+            (goto-char (car (stylish-repl-input-region-bounds)))
+            (line-beginning-position))))
       (point-max)))
 
 (defun stylish-repl-looking-at-prompt-p ()
@@ -189,7 +191,8 @@ Optional argument NO-SELECT inhibits popping to the buffer."
 
 (defun stylish-repl-maybe-insert-beforeprompt (message &optional face)
   (save-excursion
-    (beginning-of-line)
+    (let ((inhibit-field-text-motion t))
+      (beginning-of-line))e
     (if (stylish-repl-looking-at-prompt-p)
         (stylish-repl-insert-beforeprompt message face)
       (stylish-repl-insert message face))))
@@ -242,14 +245,17 @@ Optional argument NO-SELECT inhibits popping to the buffer."
          (start (car region))
          (end (cdr region))
          (text (stylish-repl-input-region-text)))
-    (when (> (length text) 0)
+    (cond
+     ((< (point) start)
+      (goto-char end))
+     ((> (length text) 0)
       (stylish-repl-usual-properties start end 'stylish-repl-sent-face)
       (unless nosave (stylish-repl-history-add text))
-      (end-of-line)
+      (goto-char (point-max))
       (stylish-repl-insert "\n")
       (if (string-match "^," text) ; perl or internal command?
           (stylish-repl-process-internal-command text)
-        (stylish-repl-eval-perl text)))))
+        (stylish-repl-eval-perl text))))))
 
 (defun stylish-repl-get-buffer (&optional name)
   (if (and (eq major-mode 'stylish-repl-mode)
@@ -296,16 +302,13 @@ Argument START and END define the region to send."
   (stylish-repl-insert stylish-repl-prompt font-lock-keyword-face '(repl-prompt t))
   (let ((inhibit-read-only t))
     (insert (propertize " "
-                        'rear-nonsticky '(read-only face intangible)
+                        'rear-nonsticky '(read-only face intangible field)
                         'read-only t
-                        'keymap stylish-repl-prompt-map
-                        'field 'user-input)))
+                        'field 'output
+                        'keymap stylish-repl-prompt-map)))
+
   (goto-char (point-max))
   (set-window-point (get-buffer-window (current-buffer)) (point-max)))
-
-(defun stylish-repl-beginning-of-line nil
-  (interactive)
-  (goto-char (car (stylish-repl-input-region-bounds))))
 
 (defun stylish-repl-OH-NOES!!11! nil
   "Reconnect to the stylish server if output gets out of sync or something."
@@ -365,7 +368,7 @@ Propertizes as though the input was typed by the user after the
 prompt."
   (goto-char start)
   (delete-region start end)
-  (insert (propertize h 'keymap stylish-repl-prompt-map 'field 'user-input))
+  (insert (propertize h 'keymap stylish-repl-prompt-map))
   (goto-char (point-max)))
 
 (add-hook 'stylish-repl-history-pre-hook

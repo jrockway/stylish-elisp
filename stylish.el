@@ -131,12 +131,22 @@ Argument MESSAGE is the text we got from stylish."
   "Tend to the Stylish connection.
 Optional argument ARGS is optional.")
 
+(defun stylish-pre-connect ()
+  "Stuff that needs to happen before we connect to Stylish."
+  (when stylish-process
+    (delete-process stylish-process)
+    (setf stylish-properties nil)
+    (setf stylish-partial-message nil)))
+
+(defun stylish-post-connect (connectinfo)
+  "Stuff that needs to happen after we have a network connection to Stylish."
+  (setq stylish-last-connectinfo connectinfo)
+  (run-hooks 'stylish-reconnect-hook))
+
 (defun stylish-connect ()
   "Connect to a stylish Stylish server."
   (interactive)
-  (when stylish-process
-    (delete-process stylish-process)
-    (setf stylish-partial-message nil))
+  (stylish-pre-connect)
   (prog1 (setf stylish-process
                (make-network-process :name "stylish"
                                      :family 'local
@@ -145,15 +155,12 @@ Optional argument ARGS is optional.")
                                      :filter #'stylish-filter
                                      :sentinel #'stylish-sentinel
                                      :coding 'utf-8))
-    (setq stylish-last-connectinfo (list #'stylish-connect))
-    (run-hooks 'stylish-reconnect-hook)))
+    (stylish-post-connect (list #'stylish-connect))))
 
 (defun stylish-tcp-connect (&optional port)
   "Connect to a stylish Stylish server running over TCP."
-  (interactive "nPort number: ")
-  (when stylish-process
-    (delete-process stylish-process)
-    (setf stylish-partial-message nil))
+  (interactive "NPort number: ")
+  (stylish-pre-connect)
   (prog1 (setf stylish-process
                (make-network-process :name "stylish"
                                      :host "localhost"
@@ -163,8 +170,7 @@ Optional argument ARGS is optional.")
                                      :filter #'stylish-filter
                                      :sentinel #'stylish-sentinel
                                      :coding 'utf-8 ))
-    (setq stylish-last-connectinfo (list #'stylish-tcp-connect port))
-    (run-hooks 'stylish-reconnect-hook)))
+    (stylish-post-connect (list #'stylish-tcp-connect port))))
 
 (defun stylish-running-p ()
   "Return non-nil if connected to Stylish, nil otherwise."
@@ -179,7 +185,6 @@ Prefix argument RECONNECT forces a reconnect."
       (error "Never connected to Stylish in this session!"))
     (destructuring-bind (func &rest args) stylish-last-connectinfo
       (apply func args))))
-
 
 (defun stylish-process-buffer ()
   (with-temp-buffer ;; todo: make the buffer non-temp?

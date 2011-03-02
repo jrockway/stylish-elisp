@@ -402,18 +402,6 @@ prompt."
          (h (stylish-repl-history-get)))
     (stylish-repl--replace-region)))
 
-;;
-;;(defun stylish-repl-highlight-input ()
-;;  (interactive)
-;;  (let ((bounds (stylish-repl-input-region-bounds)))
-;;    (stylish-syntaxify (car bounds) (cdr bounds) (stylish-repl-get-buffer))))
-;;
-;;(defun turn-on-stylish-syntax nil
-;;  "Turn on stylish syntaxifier in the REPL"
-;;  (interactive)
-;;  (with-current-buffer (stylish-repl-get-buffer)
-;;    (add-hook 'post-command-hook 'stylish-repl-highlight-input)))
-
 (defun stylish-repl-clear nil
   "Clear the REPL buffer"
   (interactive)

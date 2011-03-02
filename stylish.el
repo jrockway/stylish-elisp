@@ -93,6 +93,10 @@
 
 (defvar stylish-process nil)
 
+(defvar stylish-properties nil
+  "List of server properties sent by the server upon connection,
+  typically the language, etc.")
+
 (defvar stylish-last-connectinfo nil
   "Cons cell of (connect-function . args) to be used for reconnection.")
 
@@ -235,6 +239,7 @@ Prefix argument RECONNECT forces a reconnect."
                      (assq-delete-all cookie stylish-outstanding-request-handlers)))))
           ((equal command "welcome")
            ;; a hat tip to SLIME ;)
+           (setf stylish-properties (getf message :result))
            (message "Connected. Let the hacking begin.")))))
 
 (defun stylish-message-encode (command cookie args)

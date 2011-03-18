@@ -56,9 +56,10 @@ The following keys are bound in this minor mode:
   "Send the current function to the current Stylish REPL instance."
   (interactive)
   (save-excursion
-    (mark-defun)
-    (stylish-repl-minor-mode-flash-region (point) (mark))
-    (stylish-repl-send-region-to-stylish (point) (mark))))
+    (when (not (use-region-p))
+      (mark-defun))
+    (stylish-repl-minor-mode-flash-region (region-beginning) (region-end)))
+    (stylish-repl-send-region-to-stylish (region-beginning) (region-end)))
 
 (defun stylish-repl-minor-mode-send-buffer ()
   "Send the text of the current buffer to the current Stylish REPL instance."

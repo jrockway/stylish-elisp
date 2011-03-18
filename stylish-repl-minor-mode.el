@@ -30,6 +30,7 @@
     ;; this is the binding that SLIME picks, so I thought I would be
     ;; consistent, even though it is already used for "compile".
     (define-key map "\C-c\C-k" 'stylish-repl-minor-mode-send-buffer)
+    (define-key map "\C-xx" 'stylish-repl-minor-mode-snap-to-repl)
     map))
 
 (define-minor-mode stylish-repl-minor-mode
@@ -65,6 +66,36 @@ The following keys are bound in this minor mode:
   "Send the text of the current buffer to the current Stylish REPL instance."
   (interactive)
   (stylish-repl-send-region-to-stylish (point-min) (point-max)))
+
+;; C-x x snapping between REPL and code.  Idea stolen and improved
+;; from my own term-extras.el.
+
+(defvar stylish-repl-snapped-from nil)
+(make-variable-buffer-local 'stylish-repl-snapped-from)
+
+(defun stylish-repl-minor-mode-snap-to-repl ()
+  "Move the window focus to the Stylish REPL window associted with this buffer."
+  (interactive)
+  (let* ((from (selected-window))
+         (to   (stylish-repl-minor-mode-get-repl))
+         (w    (get-buffer-window to)))
+    (when w
+      (with-current-buffer to
+        (setq stylish-repl-snapped-from from)
+        (select-window w)
+        (goto-char (point-max))))))
+
+(define-key stylish-repl-mode-map "\C-xx" #'stylish-repl-snap-from-repl)
+
+(defun stylish-repl-snap-from-repl ()
+  "Move the window focus back to the window that we snapped from."
+  (interactive)
+  (when (not stylish-repl-snapped-from)
+    (error "Don't know where to go back to!"))
+  (let ((repl-buf (current-buffer)))
+    (select-window stylish-repl-snapped-from)
+    (with-current-buffer repl-buf
+      (setq stylish-repl-snapped-from nil))))
 
 (provide 'stylish-repl-minor-mode)
 ;;; stylish-repl-minor-mode.el ends here
